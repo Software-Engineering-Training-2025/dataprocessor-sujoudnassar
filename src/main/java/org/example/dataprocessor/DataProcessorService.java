@@ -9,21 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 
-/**
- * Students ONLY implement the process(...) method below.
- *
- * Requirements:
- * - Order: Clean -> Analyze -> Output -> Return result
- * - Do NOT mutate the original input list
- * - Handle empties as specified in AnalysisType docs
- * - Output format EXACTLY: "Result = <value>"
- * - TEXT_FILE path: target/result.txt (create parent dirs, overwrite file)
- */
 public class DataProcessorService {
 
-    /**
-     * Implement this method.
-     */
     public double process(
             CleaningType cleaningType,
             AnalysisType analysisType,
@@ -31,17 +18,11 @@ public class DataProcessorService {
             List<Integer> data) throws Exception {
 
         List<Integer> copy = new ArrayList<>(data);
-
         List<Integer> cleaned = cleanData(cleaningType, copy);
-
         double result = analyzeData(analysisType, cleaned);
-
         outputResult(outputType, result);
-
         return result;
     }
-
-
 
     private List<Integer> cleanData(CleaningType cleaningType, List<Integer> data) {
         List<Integer> cleaned = new ArrayList<>();
@@ -49,18 +30,18 @@ public class DataProcessorService {
         switch (cleaningType) {
             case REMOVE_NEGATIVES:
                 for (int num : data) {
-                    if (num >= 0) {
-                        cleaned.add(num);
+                    switch (num >= 0 ? 1 : 0) {
+                        case 1: cleaned.add(num); break;
+                        default: break;
                     }
                 }
                 break;
 
             case REPLACE_NEGATIVES_WITH_ZERO:
                 for (int num : data) {
-                    if (num < 0) {
-                        cleaned.add(0);
-                    } else {
-                        cleaned.add(num);
+                    switch (num >= 0 ? 1 : 0) {
+                        case 1: cleaned.add(num); break;
+                        case 0: cleaned.add(0); break;
                     }
                 }
                 break;
@@ -69,66 +50,64 @@ public class DataProcessorService {
         return cleaned;
     }
 
-
     private double analyzeData(AnalysisType analysisType, List<Integer> data) {
-        if (data.isEmpty()) {
-            switch (analysisType) {
-                case TOP3_FREQUENT_COUNT_SUM:
-                    return 0.0;
-                default:
-                    return Double.NaN;
-            }
-        }
-
         switch (analysisType) {
             case MEAN:
-                double sum = 0;
-                for (int num : data) sum += num;
-                return sum / data.size();
+                switch (data.isEmpty() ? 0 : 1) {
+                    case 0: return Double.NaN;
+                    case 1: return data.stream().mapToDouble(Integer::doubleValue).average().orElse(Double.NaN);
+                }
 
             case MEDIAN:
-                List<Integer> sorted = new ArrayList<>(data);
-                Collections.sort(sorted);
-                int n = sorted.size();
-                if (n % 2 == 1) {
-                    return sorted.get(n / 2);
-                } else {
-                    return (sorted.get(n / 2 - 1) + sorted.get(n / 2)) / 2.0;
+                switch (data.isEmpty() ? 0 : 1) {
+                    case 0: return Double.NaN;
+                    case 1:
+                        List<Integer> sorted = new ArrayList<>(data);
+                        Collections.sort(sorted);
+                        int n = sorted.size();
+                        return n % 2 == 1
+                                ? sorted.get(n / 2)
+                                : (sorted.get(n / 2 - 1) + sorted.get(n / 2)) / 2.0;
                 }
 
             case STD_DEV:
-                double mean = analyzeData(AnalysisType.MEAN, data);
-                double sumSq = 0;
-                for (int num : data) {
-                    sumSq += Math.pow(num - mean, 2);
+                switch (data.isEmpty() ? 0 : 1) {
+                    case 0: return Double.NaN;
+                    case 1:
+                        double mean = data.stream().mapToDouble(Integer::doubleValue).average().orElse(Double.NaN);
+                        double variance = data.stream()
+                                .mapToDouble(x -> Math.pow(x - mean, 2))
+                                .sum() / data.size();
+                        return Math.sqrt(variance);
                 }
-                return Math.sqrt(sumSq / data.size());
 
             case P90_NEAREST_RANK:
-                List<Integer> sorted90 = new ArrayList<>(data);
-                Collections.sort(sorted90);
-                int rank = (int) Math.ceil(0.90 * sorted90.size());
-                return sorted90.get(rank - 1);
+                switch (data.isEmpty() ? 0 : 1) {
+                    case 0: return Double.NaN;
+                    case 1:
+                        List<Integer> sorted90 = new ArrayList<>(data);
+                        Collections.sort(sorted90);
+                        int rank = (int) Math.ceil(0.90 * sorted90.size());
+                        return sorted90.get(rank - 1);
+                }
 
             case TOP3_FREQUENT_COUNT_SUM:
-                Map<Integer, Integer> freq = new HashMap<>();
-                for (int num : data) {
-                    freq.put(num, freq.getOrDefault(num, 0) + 1);
+                switch (data.isEmpty() ? 0 : 1) {
+                    case 0: return 0.0;
+                    case 1:
+                        Map<Integer, Integer> freq = new HashMap<>();
+                        for (int num : data) {
+                            freq.put(num, freq.getOrDefault(num, 0) + 1);
+                        }
+                        List<Integer> counts = new ArrayList<>(freq.values());
+                        counts.sort(Collections.reverseOrder());
+                        return counts.stream().limit(3).mapToDouble(Integer::doubleValue).sum();
                 }
-                List<Integer> counts = new ArrayList<>(freq.values());
-                counts.sort(Collections.reverseOrder());
-
-                double topSum = 0;
-                for (int i = 0; i < Math.min(3, counts.size()); i++) {
-                    topSum += counts.get(i);
-                }
-                return topSum;
 
             default:
                 return Double.NaN;
         }
     }
-
 
     private void outputResult(OutputType outputType, double result) throws IOException {
         String text = "Result = " + result;
@@ -146,7 +125,4 @@ public class DataProcessorService {
                 break;
         }
     }
-
-
 }
-
